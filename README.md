@@ -60,16 +60,14 @@ In this experiment:
 ---
 
 ## SystemVerilog Code
-
-### I²C Master Design 
-```systemverilog
-module i2c_master (
+```
+    module i2c_master (
     output logic SDA,
     output logic SCL,
     input  logic CLK,
     input  logic RESET
-);
-    // Simple I²C-like signaling for demonstration
+    );
+
     logic [7:0] data = 8'hA5;
     int i;
 
@@ -78,30 +76,24 @@ module i2c_master (
             SDA <= 1;
             SCL <= 1;
         end else begin
-            // START condition
             SDA <= 0;
             #5;
             for (i = 7; i >= 0; i--) begin
                 SCL <= 0;
                 SDA <= data[i];
                 #5;
-                SCL <= 1; // Clock high for data latch
+                SCL <= 1;
                 #5;
             end
-            // STOP condition
             SCL <= 1;
             SDA <= 1;
         end
     end
-endmodule
-```
-### Testbench with Assertions
-```
-module i2c_tb;
+    endmodule
+     module i2c_tb;
     logic SDA, SCL;
     logic CLK, RESET;
 
-    // Instantiate DUT
     i2c_master uut (
         .SDA(SDA),
         .SCL(SCL),
@@ -109,52 +101,64 @@ module i2c_tb;
         .RESET(RESET)
     );
 
-    // Clock generation
     initial begin
         CLK = 0;
         forever #5 CLK = ~CLK;
     end
 
-    // Reset generation
     initial begin
         RESET = 1;
         #10 RESET = 0;
     end
 
-    // Assertion for START condition: SDA must go LOW while SCL is HIGH
     property start_condition;
-        @(posedge CLK) (SCL && $fell(SDA)) |-> $display("START condition detected");
+        @(posedge CLK) (SCL && $fell(SDA));
     endproperty
-    assert property (start_condition)
-        else $error("START condition violated");
+    start_check: assert property (start_condition)
+        $display("START condition detected at time %0t", $time);
+    else
+        $error("START condition violated at time %0t", $time);
 
-    // Assertion for STOP condition: SDA must go HIGH while SCL is HIGH
     property stop_condition;
-        @(posedge CLK) (SCL && $rose(SDA)) |-> $display("STOP condition detected");
+        @(posedge CLK) (SCL && $rose(SDA));
     endproperty
-    assert property (stop_condition)
-        else $error("STOP condition violated");
+    stop_check: assert property (stop_condition)
+        $display("STOP condition detected at time %0t", $time);
+    else
+        $error("STOP condition violated at time %0t", $time);
 
-    // Handshaking check: SDA stable during SCL HIGH
     property data_stable;
         @(posedge SCL) $stable(SDA);
     endproperty
-    assert property (data_stable)
-        else $error("Data changed during clock high (I2C violation)");
+    stable_check: assert property (data_stable)
+        $display("SDA stable during SCL HIGH at time %0t", $time);
+    else
+        $error("Data changed during clock high (I2C violation) at time %0t", $time);
 
-    // Simulation control
     initial begin
         #200;
-        $display("Simulation Completed");
+        $display("\n=== Simulation Completed ===");
         $finish;
     end
-endmodule
+    endmodule
 ```
-### Simulation Output
 
------ Paste the output
 
-### Result
+
+
+
+
+### Simulation Output:
+
+<img width="1920" height="1080" alt="Screenshot 2025-11-04 152410" src="https://github.com/user-attachments/assets/19b64b5a-4a33-4f1d-bc40-0eca364bf1c8" />
+
+<img width="1920" height="1080" alt="Screenshot 2025-11-04 152421" src="https://github.com/user-attachments/assets/3a3bc505-c0d9-49e9-afcd-3e82faf68773" />
+
+<img width="1920" height="1080" alt="Screenshot 2025-11-04 152436" src="https://github.com/user-attachments/assets/3a9793d0-d654-464f-877c-a43b3b6b4029" />
+
+
+
+## Result
 The Assertion-Based Verification of the I²C protocol timing and handshaking sequences was successfully carried out using SystemVerilog.Assertions effectively verified setup, hold, start, and stop conditions, ensuring reliable communication as per the I²C protocol specification.
 
 
